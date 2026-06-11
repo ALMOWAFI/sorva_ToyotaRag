@@ -224,6 +224,59 @@ textInput.addEventListener('keydown', (e) => {
   if (e.key === 'Enter') sendQuestion(textInput.value);
 });
 
+// ── WebSocket — receives hands-free state from wake word engine ───────────────
+
+function connectWebSocket() {
+  const ws = new WebSocket(`ws://${location.host}/ws`);
+
+  ws.onmessage = (event) => {
+    const data = JSON.parse(event.data);
+
+    switch (data.state) {
+      case 'listening':
+        setOrbState('listening');
+        break;
+
+      case 'transcribing':
+        setOrbState('transcribing');
+        break;
+
+      case 'listening_result':
+        // Show what the driver said
+        if (data.text) appendMessage('driver', data.text);
+        break;
+
+      case 'thinking':
+        setOrbState('thinking');
+        showThinking();
+        break;
+
+      case 'answer':
+        removeThinking();
+        if (data.answer) {
+          appendMessage('assistant', data.answer);
+          conversationHistory.push({ role: 'driver', text: data.question || '' });
+          conversationHistory.push({ role: 'assistant', text: data.answer });
+        }
+        break;
+
+      case 'speaking':
+        setOrbState('speaking');
+        statusDot.className = 'status-dot ready';
+        break;
+
+      case 'idle':
+        setOrbState('idle');
+        isThinking = false;
+        sendBtn.disabled = false;
+        break;
+    }
+  };
+
+  ws.onclose = () => setTimeout(connectWebSocket, 2000); // auto-reconnect
+  ws.onerror = () => ws.close();
+}
+
 // ── Init ──────────────────────────────────────────────────────────────────────
 
 fetch('/health')
@@ -234,3 +287,5 @@ fetch('/health')
       : 'status-dot error';
   })
   .catch(() => { statusDot.className = 'status-dot error'; });
+
+connectWebSocket();

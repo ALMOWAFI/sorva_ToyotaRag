@@ -1,3 +1,4 @@
+import asyncio
 import io
 import json
 import logging
@@ -9,7 +10,7 @@ import httpx
 import numpy as np
 import soundfile as sf
 from dotenv import load_dotenv
-from fastapi import FastAPI, File, HTTPException, Request, UploadFile
+from fastapi import FastAPI, File, HTTPException, Request, UploadFile, WebSocket, WebSocketDisconnect
 from fastapi.responses import JSONResponse, HTMLResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
@@ -75,11 +76,58 @@ class AssistantResponse(BaseModel):
 
 
 # ---------------------------------------------------------------------------
-# App
+# App + WebSocket state broadcast
 # ---------------------------------------------------------------------------
 
 app = FastAPI(title="Sequoia RAG Assistant", version="1.0.0")
 app.mount("/ui", StaticFiles(directory="ui"), name="ui")
+
+_ws_clients: set[WebSocket] = set()
+
+
+async def broadcast(payload: dict):
+    """Push state update to all connected browser clients."""
+    msg = json.dumps(payload)
+    dead = set()
+    for ws in _ws_clients:
+        try:
+            await ws.send_text(msg)
+        except Exception:
+            dead.add(ws)
+    _ws_clients.difference_update(dead)
+
+
+@app.websocket("/ws")
+async def websocket_endpoint(ws: WebSocket):
+    await ws.accept()
+    _ws_clients.add(ws)
+    try:
+        while True:
+            await ws.receive_text()  # keep connection alive
+    except WebSocketDisconnect:
+        _ws_clients.discard(ws)
+
+
+WAKE_WORD_ENABLED = os.getenv("WAKE_WORD_ENABLED", "true").lower() == "true"
+_wake_engine = None
+
+
+@app.on_event("startup")
+async def startup():
+    global _wake_engine
+    if WAKE_WORD_ENABLED:
+        try:
+            from wake_word import WakeWordEngine
+            _wake_engine = WakeWordEngine(broadcast_fn=broadcast)
+            _wake_engine.start(asyncio.get_event_loop())
+        except Exception as e:
+            logger.warning(f"Wake word engine failed to start: {e}. Continuing without it.")
+
+
+@app.on_event("shutdown")
+async def shutdown():
+    if _wake_engine:
+        _wake_engine.stop()
 
 
 @app.exception_handler(Exception)
