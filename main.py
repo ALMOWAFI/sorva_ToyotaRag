@@ -112,13 +112,44 @@ WAKE_WORD_ENABLED = os.getenv("WAKE_WORD_ENABLED", "true").lower() == "true"
 _wake_engine = None
 
 
+async def _ask_direct(question: str) -> str:
+    """Call the LLM pipeline directly — used by wake word engine."""
+    from retrieve import retrieve as _retrieve
+    try:
+        chunks = _retrieve(question, top_k=TOP_K)
+    except Exception:
+        chunks = []
+
+    context = "\n\n".join(
+        f"[{c['metadata'].get('source_file','manual')}]\n{c['content'][:500]}"
+        for c in chunks[:3]
+    )
+    prompt = SYSTEM_PROMPT.format(context=context, history="(start of conversation)", question=question)
+
+    import httpx as _httpx
+    async with _httpx.AsyncClient(timeout=OLLAMA_TIMEOUT) as client:
+        resp = await client.post(f"{OLLAMA_BASE_URL}/api/generate", json={
+            "model": OLLAMA_MODEL, "prompt": prompt, "stream": False,
+            "think": False,
+            "options": {"temperature": 0.2, "num_predict": 120, "num_ctx": 1024},
+        })
+        resp.raise_for_status()
+    return resp.json().get("response", "Sorry, I could not get an answer.").strip()
+
+
 @app.on_event("startup")
 async def startup():
     global _wake_engine
     if WAKE_WORD_ENABLED:
         try:
             from wake_word import WakeWordEngine
-            _wake_engine = WakeWordEngine(broadcast_fn=broadcast)
+            _wake_engine = WakeWordEngine(
+                broadcast_fn=broadcast,
+                get_whisper_fn=get_whisper,
+                get_kokoro_fn=get_kokoro,
+                retrieve_fn=retrieve,
+                ask_fn=_ask_direct,
+            )
             _wake_engine.start(asyncio.get_event_loop())
         except Exception as e:
             logger.warning(f"Wake word engine failed to start: {e}. Continuing without it.")
@@ -216,6 +247,13 @@ async def speak(payload: dict):
         raise HTTPException(status_code=500, detail=f"TTS failed: {str(exc)[:100]}")
 
 
+GREETING_TRIGGERS = {
+    "hello jarvis", "hey jarvis", "hi jarvis", "jarvis", "ok jarvis",
+    "hello", "hi", "hey", "yo", "sup",
+}
+
+GREETING_RESPONSE = "Ready. What's going on with the car?"
+
 GENERAL_HELP_TRIGGERS = {
     "what can you do", "how can you help", "what do you help with",
     "what are you", "what is this", "help me in general", "what can you assist",
@@ -241,8 +279,18 @@ async def ask(payload: DriverQuestion) -> AssistantResponse:
 
     logger.info(f"question={question!r}")
 
+    q_lower = question.strip().lower().rstrip(".,!?")
+
+    # Filter out greetings / accidental wake word captures
+    if q_lower in GREETING_TRIGGERS or len(q_lower.split()) <= 2 and any(t in q_lower for t in GREETING_TRIGGERS):
+        return AssistantResponse(
+            answer=GREETING_RESPONSE,
+            is_clarifying_question=False,
+            sources=[],
+            timestamp=datetime.now(timezone.utc).isoformat(),
+        )
+
     # Handle general help questions directly without hitting the LLM
-    q_lower = question.lower()
     if any(trigger in q_lower for trigger in GENERAL_HELP_TRIGGERS) and len(question) < 120:
         return AssistantResponse(
             answer=GENERAL_HELP_RESPONSE,
@@ -277,10 +325,10 @@ async def ask(payload: DriverQuestion) -> AssistantResponse:
         "stream": False,
         "think": False,
         "options": {
-            "temperature": 0.3,
+            "temperature": 0.2,
             "top_p": 0.9,
-            "num_predict": 300,
-            "num_ctx": 2048,
+            "num_predict": 120,
+            "num_ctx": 1024,
         },
     }
 
