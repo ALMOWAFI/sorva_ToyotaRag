@@ -168,6 +168,23 @@ async def speak(payload: dict):
         raise HTTPException(status_code=500, detail=f"TTS failed: {str(exc)[:100]}")
 
 
+GENERAL_HELP_TRIGGERS = {
+    "what can you do", "how can you help", "what do you help with",
+    "what are you", "what is this", "help me in general", "what can you assist",
+    "how does this work", "what kind of questions", "what can i ask",
+}
+
+GENERAL_HELP_RESPONSE = (
+    "I can help you with anything about your Sequoia. Ask me about:\n\n"
+    "• Warning lights — what they mean and how urgent\n"
+    "• Strange sounds, smells, or vibrations\n"
+    "• Maintenance schedule and what's due\n"
+    "• How features work (4WD, cruise control, towing)\n"
+    "• What to do in a specific situation\n\n"
+    "Just describe what you're seeing or hearing and I'll look it up in your owner's manual."
+)
+
+
 @app.post("/ask", response_model=AssistantResponse)
 async def ask(payload: DriverQuestion) -> AssistantResponse:
     question = payload.question.strip()
@@ -175,6 +192,16 @@ async def ask(payload: DriverQuestion) -> AssistantResponse:
         raise HTTPException(status_code=422, detail="Question cannot be empty.")
 
     logger.info(f"question={question!r}")
+
+    # Handle general help questions directly without hitting the LLM
+    q_lower = question.lower()
+    if any(trigger in q_lower for trigger in GENERAL_HELP_TRIGGERS) and len(question) < 120:
+        return AssistantResponse(
+            answer=GENERAL_HELP_RESPONSE,
+            is_clarifying_question=False,
+            sources=[],
+            timestamp=datetime.now(timezone.utc).isoformat(),
+        )
 
     # Retrieve relevant chunks from KB
     try:
@@ -188,17 +215,13 @@ async def ask(payload: DriverQuestion) -> AssistantResponse:
     )
 
     # Build conversation history block
-    history_block = ""
-    if payload.conversation_history:
-        lines = []
-        for msg in payload.conversation_history[-6:]:  # last 3 exchanges
-            role = "Driver" if msg["role"] == "driver" else "Assistant"
-            lines.append(f"{role}: {msg['text']}")
-        history_block = "\nCONVERSATION SO FAR:\n" + "\n".join(lines) + "\n"
+    history_lines = []
+    for msg in payload.conversation_history[-6:]:
+        role = "Driver" if msg["role"] == "driver" else "Assistant"
+        history_lines.append(f"{role}: {msg['text']}")
+    history_block = "\n".join(history_lines) if history_lines else "(start of conversation)"
 
-    prompt = SYSTEM_PROMPT.format(context=context, question=question)
-    if history_block:
-        prompt = prompt.replace("DRIVER'S QUESTION:", history_block + "DRIVER'S QUESTION:")
+    prompt = SYSTEM_PROMPT.format(context=context, history=history_block, question=question)
 
     ollama_payload = {
         "model": OLLAMA_MODEL,
