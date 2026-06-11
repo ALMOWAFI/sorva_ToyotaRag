@@ -1,12 +1,12 @@
 import json
 import logging
 import os
-import re
+import tempfile
 from datetime import datetime, timezone
 
 import httpx
 from dotenv import load_dotenv
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, File, HTTPException, Request, UploadFile
 from fastapi.responses import JSONResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
@@ -20,6 +20,19 @@ OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
 OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "qwen2.5:1.5b")
 OLLAMA_TIMEOUT = float(os.getenv("OLLAMA_TIMEOUT", "120"))
 TOP_K = int(os.getenv("TOP_K", "5"))
+WHISPER_MODEL = os.getenv("WHISPER_MODEL", "small.en")
+
+# Whisper loaded once on first transcription request
+_whisper = None
+
+def get_whisper():
+    global _whisper
+    if _whisper is None:
+        from faster_whisper import WhisperModel
+        logger.info(f"Loading Whisper model: {WHISPER_MODEL}")
+        _whisper = WhisperModel(WHISPER_MODEL, device="cpu", compute_type="int8")
+        logger.info("Whisper ready.")
+    return _whisper
 
 logging.basicConfig(
     level=logging.INFO,
@@ -81,7 +94,33 @@ async def health():
         "ollama": ollama_status,
         "faiss_index": "ready" if (index_path / "index.faiss").exists() else "not_built",
         "model": OLLAMA_MODEL,
+        "whisper": WHISPER_MODEL,
     }
+
+
+@app.post("/transcribe")
+async def transcribe(audio: UploadFile = File(...)):
+    """Receive audio blob from browser, return transcribed text."""
+    audio_bytes = await audio.read()
+    if not audio_bytes:
+        raise HTTPException(status_code=422, detail="Empty audio file.")
+
+    with tempfile.NamedTemporaryFile(suffix=".webm", delete=False) as tmp:
+        tmp.write(audio_bytes)
+        tmp_path = tmp.name
+
+    try:
+        whisper = get_whisper()
+        segments, _ = whisper.transcribe(tmp_path, language="en", beam_size=1)
+        text = " ".join(seg.text.strip() for seg in segments).strip()
+        logger.info(f"transcribed={text!r}")
+    finally:
+        os.unlink(tmp_path)
+
+    if not text:
+        raise HTTPException(status_code=422, detail="Could not transcribe audio.")
+
+    return {"text": text}
 
 
 @app.post("/ask", response_model=AssistantResponse)

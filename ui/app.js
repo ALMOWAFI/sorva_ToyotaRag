@@ -8,50 +8,8 @@ const statusDot = document.getElementById('statusDot');
 let conversationHistory = [];
 let isListening = false;
 let isThinking = false;
-let recognition = null;
-
-// ── Voice setup ──────────────────────────────────────────────────────────────
-
-function setupVoice() {
-  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if (!SpeechRecognition) {
-    orbLabel.textContent = 'Voice not supported';
-    orb.style.opacity = '0.4';
-    orb.style.cursor = 'default';
-    return;
-  }
-
-  recognition = new SpeechRecognition();
-  recognition.lang = 'en-US';
-  recognition.interimResults = false;
-  recognition.maxAlternatives = 1;
-
-  recognition.onstart = () => {
-    isListening = true;
-    setOrbState('listening');
-  };
-
-  recognition.onresult = (event) => {
-    const transcript = event.results[0][0].transcript;
-    textInput.value = transcript;
-    stopListening();
-    sendQuestion(transcript);
-  };
-
-  recognition.onerror = () => stopListening();
-  recognition.onend = () => { if (isListening) stopListening(); };
-}
-
-function startListening() {
-  if (!recognition || isThinking) return;
-  recognition.start();
-}
-
-function stopListening() {
-  isListening = false;
-  if (recognition) recognition.stop();
-  if (!isThinking) setOrbState('idle');
-}
+let mediaRecorder = null;
+let audioChunks = [];
 
 // ── Orb states ────────────────────────────────────────────────────────────────
 
@@ -65,9 +23,76 @@ function setOrbState(state) {
     orb.classList.add('thinking');
     orbLabel.textContent = 'Thinking...';
     orbLabel.style.color = '#f59e0b';
+  } else if (state === 'transcribing') {
+    orb.classList.add('thinking');
+    orbLabel.textContent = 'Transcribing...';
+    orbLabel.style.color = '#f59e0b';
   } else {
     orbLabel.textContent = 'Tap to speak';
     orbLabel.style.color = '#444';
+  }
+}
+
+// ── Voice recording ───────────────────────────────────────────────────────────
+
+async function startListening() {
+  if (isThinking || isListening) return;
+
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    audioChunks = [];
+    mediaRecorder = new MediaRecorder(stream);
+
+    mediaRecorder.ondataavailable = (e) => {
+      if (e.data.size > 0) audioChunks.push(e.data);
+    };
+
+    mediaRecorder.onstop = async () => {
+      stream.getTracks().forEach(t => t.stop());
+      setOrbState('transcribing');
+      const blob = new Blob(audioChunks, { type: 'audio/webm' });
+      await transcribeAndSend(blob);
+    };
+
+    mediaRecorder.start();
+    isListening = true;
+    setOrbState('listening');
+
+  } catch (err) {
+    console.error('Microphone error:', err);
+    appendMessage('assistant', 'Could not access microphone. Please check permissions.');
+  }
+}
+
+function stopListening() {
+  if (!isListening || !mediaRecorder) return;
+  isListening = false;
+  mediaRecorder.stop();
+}
+
+async function transcribeAndSend(blob) {
+  const formData = new FormData();
+  formData.append('audio', blob, 'recording.webm');
+
+  try {
+    const res = await fetch('/transcribe', { method: 'POST', body: formData });
+    if (!res.ok) {
+      appendMessage('assistant', 'Could not transcribe audio. Try typing instead.');
+      setOrbState('idle');
+      return;
+    }
+    const data = await res.json();
+    const text = data.text.trim();
+    if (text) {
+      textInput.value = text;
+      await sendQuestion(text);
+    } else {
+      appendMessage('assistant', "I didn't catch that. Try again.");
+      setOrbState('idle');
+    }
+  } catch (e) {
+    appendMessage('assistant', 'Transcription failed. Server may not be running.');
+    setOrbState('idle');
   }
 }
 
@@ -160,8 +185,6 @@ textInput.addEventListener('keydown', (e) => {
 });
 
 // ── Init ──────────────────────────────────────────────────────────────────────
-
-setupVoice();
 
 fetch('/health')
   .then(r => r.json())
