@@ -27,6 +27,10 @@ function setOrbState(state) {
     orb.classList.add('thinking');
     orbLabel.textContent = 'Transcribing...';
     orbLabel.style.color = '#f59e0b';
+  } else if (state === 'speaking') {
+    orb.classList.add('speaking');
+    orbLabel.textContent = 'Speaking...';
+    orbLabel.style.color = '#10b981';
   } else {
     orbLabel.textContent = 'Tap to speak';
     orbLabel.style.color = '#444';
@@ -158,6 +162,7 @@ async function sendQuestion(question) {
       appendMessage('assistant', data.answer, data.is_clarifying_question);
       conversationHistory.push({ role: 'assistant', text: data.answer });
       statusDot.className = 'status-dot ready';
+      speakResponse(data.answer);
     }
   } catch (e) {
     removeThinking();
@@ -168,6 +173,41 @@ async function sendQuestion(question) {
   isThinking = false;
   sendBtn.disabled = false;
   setOrbState('idle');
+}
+
+// ── TTS playback ──────────────────────────────────────────────────────────────
+
+let currentAudio = null;
+
+async function speakResponse(text) {
+  // Stop any currently playing audio
+  if (currentAudio) {
+    currentAudio.pause();
+    currentAudio = null;
+  }
+
+  try {
+    setOrbState('speaking');
+    const res = await fetch('/speak', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text }),
+    });
+
+    if (!res.ok) return;
+
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    currentAudio = new Audio(url);
+    currentAudio.onended = () => {
+      setOrbState('idle');
+      URL.revokeObjectURL(url);
+      currentAudio = null;
+    };
+    currentAudio.play();
+  } catch (e) {
+    setOrbState('idle');
+  }
 }
 
 // ── Event listeners ───────────────────────────────────────────────────────────

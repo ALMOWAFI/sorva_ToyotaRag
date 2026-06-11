@@ -174,6 +174,19 @@ body {
   animation: spin 2s linear infinite;
 }
 
+/* Speaking state */
+.orb.speaking .orb-core {
+  background: radial-gradient(circle at 35% 35%, #10b981, #064e3b);
+  box-shadow: 0 0 30px rgba(16, 185, 129, 0.6);
+  animation: speakPulse 0.6s ease-in-out infinite alternate;
+}
+.orb.speaking .orb-ring {
+  border-color: rgba(16, 185, 129, 0.3);
+  animation: expandRing 1s ease-out infinite;
+}
+.orb.speaking .orb-ring:nth-child(2) { animation-delay: 0.2s; }
+.orb.speaking .orb-ring:nth-child(3) { animation-delay: 0.4s; }
+
 .orb-label {
   font-size: 12px;
   color: #444;
@@ -238,4 +251,8 @@ button#sendBtn:disabled { background: #1e1e2e; color: #444; cursor: not-allowed;
 @keyframes spin {
   from { transform: rotate(0deg); }
   to   { transform: rotate(360deg); }
+}
+@keyframes speakPulse {
+  from { transform: scale(1);    box-shadow: 0 0 20px rgba(16,185,129,0.4); }
+  to   { transform: scale(1.1); box-shadow: 0 0 40px rgba(16,185,129,0.8); }
 }

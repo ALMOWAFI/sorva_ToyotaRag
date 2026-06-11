@@ -1,3 +1,4 @@
+import io
 import json
 import logging
 import os
@@ -5,9 +6,11 @@ import tempfile
 from datetime import datetime, timezone
 
 import httpx
+import numpy as np
+import soundfile as sf
 from dotenv import load_dotenv
 from fastapi import FastAPI, File, HTTPException, Request, UploadFile
-from fastapi.responses import JSONResponse, HTMLResponse
+from fastapi.responses import JSONResponse, HTMLResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
@@ -21,9 +24,12 @@ OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "qwen2.5:1.5b")
 OLLAMA_TIMEOUT = float(os.getenv("OLLAMA_TIMEOUT", "120"))
 TOP_K = int(os.getenv("TOP_K", "5"))
 WHISPER_MODEL = os.getenv("WHISPER_MODEL", "small.en")
+TTS_VOICE = os.getenv("TTS_VOICE", "af_heart")  # Kokoro voice
 
-# Whisper loaded once on first transcription request
+# Models loaded once on first use
 _whisper = None
+_kokoro = None
+
 
 def get_whisper():
     global _whisper
@@ -33,6 +39,16 @@ def get_whisper():
         _whisper = WhisperModel(WHISPER_MODEL, device="cpu", compute_type="int8")
         logger.info("Whisper ready.")
     return _whisper
+
+
+def get_kokoro():
+    global _kokoro
+    if _kokoro is None:
+        from kokoro import KPipeline
+        logger.info("Loading Kokoro TTS...")
+        _kokoro = KPipeline(lang_code="a")  # "a" = American English
+        logger.info("Kokoro TTS ready.")
+    return _kokoro
 
 logging.basicConfig(
     level=logging.INFO,
@@ -121,6 +137,35 @@ async def transcribe(audio: UploadFile = File(...)):
         raise HTTPException(status_code=422, detail="Could not transcribe audio.")
 
     return {"text": text}
+
+
+@app.post("/speak")
+async def speak(payload: dict):
+    """Convert text to speech using Kokoro TTS, return WAV audio."""
+    text = (payload.get("text") or "").strip()
+    if not text:
+        raise HTTPException(status_code=422, detail="No text provided.")
+
+    try:
+        pipeline = get_kokoro()
+        audio_chunks = []
+        for _, _, audio in pipeline(text, voice=TTS_VOICE, speed=1.0):
+            if audio is not None:
+                audio_chunks.append(audio)
+
+        if not audio_chunks:
+            raise HTTPException(status_code=500, detail="TTS produced no audio.")
+
+        combined = np.concatenate(audio_chunks)
+        buf = io.BytesIO()
+        sf.write(buf, combined, samplerate=24000, format="WAV")
+        buf.seek(0)
+        logger.info(f"TTS: {len(text)} chars → {len(combined)/24000:.1f}s audio")
+        return StreamingResponse(buf, media_type="audio/wav")
+
+    except Exception as exc:
+        logger.exception("TTS error")
+        raise HTTPException(status_code=500, detail=f"TTS failed: {str(exc)[:100]}")
 
 
 @app.post("/ask", response_model=AssistantResponse)
