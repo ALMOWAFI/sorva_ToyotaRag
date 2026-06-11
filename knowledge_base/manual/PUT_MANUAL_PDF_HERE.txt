@@ -1,0 +1,8 @@
+Place the 2016 Toyota Sequoia owner's manual PDF in this folder, then run:
+
+    python build_index.py
+
+The PDF filename does not matter — any PDF in this folder will be indexed.
+
+You can download the official manual from:
+Toyota's owner resources portal — search "2016 Sequoia owner's manual PDF"

@@ -1,0 +1,64 @@
+2016 Toyota Sequoia — Dashboard Warning Lights Reference
+
+RED LIGHTS (Stop driving as soon as safely possible)
+
+Oil Pressure Warning (red oil can icon)
+Meaning: Engine oil pressure is critically low. Engine damage can occur within minutes.
+Action: Pull over immediately, turn off engine. Do not restart. Check oil level. Call for assistance if oil level is normal — there may be a pump failure.
+
+Engine Temperature Warning (red thermometer in water icon)
+Meaning: Engine is overheating.
+Action: Pull over safely, turn off engine immediately. Do not open the radiator cap when hot. Wait 30 minutes before checking coolant level.
+
+Battery Warning (red battery icon)
+Meaning: Charging system failure. The car is running on battery power only.
+Action: Turn off all non-essential electronics (AC, radio). Drive directly to a service center — you may have 30-60 minutes before the car stops.
+
+Brake System Warning (red exclamation mark in circle or BRAKE text)
+Meaning: Low brake fluid, brake system failure, or parking brake is on.
+Action: First check if parking brake is released. If warning persists, brake fluid may be low or there is a brake system fault. Drive cautiously to a service center immediately.
+
+Power Steering Warning (red steering wheel icon)
+Meaning: Power steering system failure.
+Action: Steering will feel very heavy. Drive carefully to a service center.
+
+---
+
+YELLOW/AMBER LIGHTS (Service required soon — can usually continue driving)
+
+Check Engine Light (yellow engine outline)
+Meaning: Engine management system has detected a fault. Can range from minor (loose gas cap) to serious (sensor or emissions fault).
+Action: If light is steady, check gas cap first — tighten it. If it stays on, get a diagnostic scan within the week. If the light is FLASHING, reduce speed and get checked immediately — indicates active misfires.
+
+VSC / TRAC OFF Warning (VSC OFF or TRAC OFF text)
+Meaning: Vehicle Stability Control or Traction Control has been manually turned off, or has detected a fault.
+Action: If you did not turn these off manually, have the system inspected.
+
+4WD Warning Light
+Meaning: Issue with the four-wheel drive system.
+Action: If light is flashing, stop and wait for the system to cool. If it stays on, have the 4WD system inspected.
+
+Tire Pressure Warning (TPMS — yellow exclamation mark in tire shape)
+Meaning: One or more tires are significantly under-inflated (usually 25% below recommended pressure).
+Action: Check tire pressures when safe. 2016 Sequoia recommended pressure is 35 PSI front and rear. Inflate to correct level and the light should turn off after driving a few miles.
+
+Low Fuel Warning (yellow fuel pump icon)
+Meaning: Approximately 2.6 gallons (about 50 miles) of fuel remaining.
+Action: Refuel soon.
+
+Maintenance Required (MAINT REQD — yellow wrench or text)
+Meaning: Scheduled maintenance is due (typically oil change every 5,000 miles or 6 months).
+Action: Schedule service. To reset: hold the trip reset button while turning ignition to ON position.
+
+ABS Warning (yellow ABS text)
+Meaning: Anti-lock braking system fault. Regular brakes still work but ABS will not activate.
+Action: Braking is still functional but reduced in emergency stops. Get inspected soon.
+
+---
+
+GREEN/BLUE LIGHTS (Informational — no action needed)
+
+4WD High / 4WD Low indicator — 4WD is engaged
+Cruise Control indicator — Cruise control is active
+High Beam indicator (blue) — High beams are on
+Turn signal indicators — Normal operation

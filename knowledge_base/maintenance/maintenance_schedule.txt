@@ -1,0 +1,47 @@
+2016 Toyota Sequoia — Maintenance Schedule
+
+Every 5,000 miles or 6 months (whichever comes first):
+- Engine oil and oil filter change (5W-30 full synthetic recommended)
+- Tire rotation
+- Visual inspection of brakes, fluid levels, lights
+
+Every 15,000 miles:
+- Cabin air filter inspection and replacement if needed
+- Engine air filter inspection
+- Brake inspection
+
+Every 30,000 miles:
+- Transmission fluid inspection
+- Transfer case fluid inspection (4WD models)
+- Front and rear differential fluid inspection
+- Spark plug inspection
+
+Every 60,000 miles:
+- Spark plug replacement (iridium plugs — long life)
+- Engine coolant replacement
+- Brake fluid replacement
+- Fuel filter inspection
+
+Every 90,000 miles:
+- Drive belt inspection and replacement if needed
+- Transfer case and differential fluid change
+
+Tire Information:
+- Recommended tire pressure: 35 PSI front and rear
+- Original tire size: 275/65R18
+- Spare tire: Full-size matching spare
+- Tire rotation pattern: Front-to-back rotation recommended every 5,000 miles
+
+Fluid Specifications:
+- Engine oil: 5W-30 (full synthetic preferred)
+- Transmission fluid: Toyota ATF Type T-IV or WS
+- Coolant: Toyota Super Long Life Coolant (pink)
+- Brake fluid: DOT 3
+- Power steering fluid: Dexron III ATF
+- Rear differential: 75W-90 gear oil (limited slip additive required for limited-slip differential)
+- Transfer case: Toyota transfer case fluid or equivalent
+
+Battery:
+- Group size: 24F or 27F
+- Cold cranking amps: 550 CCA minimum recommended
+- Replacement interval: 3-5 years depending on climate

@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sequoia Assistant</title>
+  <link rel="stylesheet" href="/ui/style.css" />
+</head>
+<body>
+  <div class="container">
+
+    <div class="header">
+      <div class="car-name">2016 Toyota Sequoia</div>
+      <div class="status-dot" id="statusDot"></div>
+    </div>
+
+    <div class="chat-area" id="chatArea">
+      <div class="message assistant">
+        <span>Hi, I'm your Sequoia assistant. Ask me about warning lights, sounds, or anything about your car.</span>
+      </div>
+    </div>
+
+    <div class="orb-container">
+      <div class="orb" id="orb">
+        <div class="orb-ring"></div>
+        <div class="orb-ring"></div>
+        <div class="orb-ring"></div>
+        <div class="orb-core"></div>
+      </div>
+      <div class="orb-label" id="orbLabel">Tap to speak</div>
+    </div>
+
+    <div class="input-row">
+      <input type="text" id="textInput" placeholder="Or type your question..." />
+      <button id="sendBtn">Send</button>
+    </div>
+
+  </div>
+
+  <script src="/ui/app.js"></script>
+</body>
+</html>
